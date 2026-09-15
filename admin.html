@@ -1,0 +1,10 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Lydia Admin</title>
+<style>body{font-family:Arial;margin:30px;background:#fff5fa;color:#34232b}table{width:100%;border-collapse:collapse;background:white}th,td{padding:9px;border:1px solid #ead6df;text-align:left;font-size:12px}th{background:#ffe2ef}.map{font-family:monospace}</style></head>
+<body><h1>Lydia Photos — Visits</h1><p>Local demo dashboard. Add real authentication before deploying.</p><div id="out">Loading...</div>
+<script>
+fetch("/api/visits").then(r=>r.json()).then(rows=>{
+let h="<table><tr><th>Time</th><th>IP</th><th>Device</th><th>OS</th><th>Browser</th><th>Screen</th><th>Referrer</th><th>GPS</th></tr>";
+for(const x of rows) h+=`<tr><td>${x.time}</td><td>${x.ip}</td><td>${x.device||""}</td><td>${x.os||""}</td><td>${x.browser||""}</td><td>${x.screen?x.screen.width+"×"+x.screen.height:""}</td><td>${x.referrer||""}</td><td>${x.gpsConsent?x.latitude+", "+x.longitude+" (±"+x.accuracy+"m)": "No GPS consent"}</td></tr>`;
+document.querySelector("#out").innerHTML=h+"</table>";
+}).catch(()=>document.querySelector("#out").textContent="Could not load visits.");
+</script></body></html>

